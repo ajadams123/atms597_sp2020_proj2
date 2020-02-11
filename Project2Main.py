@@ -67,3 +67,41 @@ df.head()
 df
 
 df.to_csv('seattle_1900-2008.csv', index=False)
+
+
+## Read in TMAX data from CSV
+data = pd.read_csv('https://raw.githubusercontent.com/ajadams123/atms597_sp2020_proj2/master/seattle_dailyave_1900-2008.csv')
+
+data_adjusted = data.pivot(index='date', columns='datatype', values='value').reset_index().rename_axis(None, axis=1)
+data_adj2 = data_adjusted.set_index(pd.DatetimeIndex(data_adjusted['date']))
+
+# Parse datestring into separate columns
+data_adj2['Year'] = pd.to_datetime(data_adj2['date']).dt.year
+data_adj2['Month'] = pd.to_datetime(data_adj2['date']).dt.month
+data_adj2['Week_of_Year'] = pd.to_datetime(data_adj2['date']).dt.week
+data_adj2['Day'] = pd.to_datetime(data_adj2['date']).dt.day
+data_adj2['Time'] = pd.to_datetime(data_adj2['date']).dt.time
+
+# Read in TMAX/TMIN values
+TMAX = data_adj2['TMAX']
+TMIN = data_adj2['TMIN']
+
+# Calculate daily-averaged temperatures
+Temp_DailyAveraged = (TMAX + TMIN)/2
+data_adj2['Temp_DailyAveraged'] = Temp_DailyAveraged
+
+# Group Daily-averaged temperatures by Year/Month, then Average
+Temp_YearlyAveraged = data_adj2.groupby(['Year'], as_index=False)['Temp_DailyAveraged'].mean()
+Temp_MonthlyAveraged = data_adj2.groupby(['Year','Month'], as_index=False)['Temp_DailyAveraged'].mean()
+Temp_WeeklyAveraged = data_adj2.groupby(['Year','Week_of_Year'], as_index=False)['Temp_DailyAveraged'].mean()
+
+# 1971-2000 Average
+Temp_LongTermMean = data_adj2[(data_adj2['Year'] > 1970) & (data_adj2['Year'] < 2001)]['Temp_DailyAveraged'].mean()
+
+# 1901-2000 STD
+Temp_LongTermSTD = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)]['Temp_DailyAveraged'].std()
+
+# Calculate Normalized Anomalies
+Temp_YearlyAveragedNormalizedAnomalies = (Temp_YearlyAveraged - Temp_LongTermMean)/Temp_LongTermSTD
+Temp_MonthlyAveragedNormalizedAnomalies = (Temp_MonthlyAveraged - Temp_LongTermMean)/Temp_LongTermSTD
+Temp_WeeklyAveragedNormalizedAnomalies = (Temp_WeeklyAveraged - Temp_LongTermMean)/Temp_LongTermSTD
