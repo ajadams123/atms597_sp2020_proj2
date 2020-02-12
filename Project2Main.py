@@ -35,12 +35,12 @@ def make_request(endpoint, payload=None):
         params=payload
     )
 
-startdates = np.arange(2010,2019)
+startdates = np.arange(1876,2019)
 
 results = []
 
 
-for i in range(len(startdates)):
+for i in range(len(startdates) + 1):
 
     display.display(f'Gathering data for {str(startdates[i])}')
     
@@ -48,9 +48,8 @@ for i in range(len(startdates)):
     'data', 
         {
         'datasetid' : 'GHCND', # Global Historical Climatology Network - Daily (GHCND) dataset
-        'stationid' : 'GHCND:USC00457773', # Snoqualmie Falls, WA
-#        'locationid': 'CITY:US530018', # Seattle, WA
-        'datatypeid': 'TMAX', 
+        'stationid' : 'GHCND:GM000003319', # Berlin, Germany
+        'datatypeid': ('TMAX', 'TMIN'), 
         'startdate' : datetime.date(startdates[i], 1, 1),
         'enddate' : datetime.date(startdates[i], 12, 31),
         'units' : 'metric',
@@ -61,18 +60,17 @@ for i in range(len(startdates)):
         # we extend the list instead of appending to avoid getting a nested list
         results.extend(response.json()['results'])
 
+#creating Pandas dataframe from results
 df = pd.DataFrame(results)
-df.head()
 
+#checking to see if data looks good
 df
 
-df.to_csv('seattle_1900-2008.csv', index=False)
+#saving data to csv for download if you want
+df.to_csv('berlin_dailytemps_1876-2019.csv', index=False)
 
-
-## Read in TMAX data from CSV
-data = pd.read_csv('https://raw.githubusercontent.com/ajadams123/atms597_sp2020_proj2/master/seattle_dailyave_1900-2008.csv')
-
-data_adjusted = data.pivot(index='date', columns='datatype', values='value').reset_index().rename_axis(None, axis=1)
+#Moving TMAX and TMIN into separate columns
+data_adjusted = df.pivot(index='date', columns='datatype', values='value').reset_index().rename_axis(None, axis=1)
 data_adj2 = data_adjusted.set_index(pd.DatetimeIndex(data_adjusted['date']))
 
 # Parse datestring into separate columns
@@ -110,3 +108,62 @@ Temp_LongerTermWeeklyMean_STD = np.std(Temp_LongerTermWeeklyMean.values[:,1])
 Temp_YearlyAveragedNormalizedAnomalies = (Temp_YearlyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermYearlyMean_STD
 Temp_MonthlyAveragedNormalizedAnomalies = (Temp_MonthlyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermMonthlyMean_STD
 Temp_WeeklyAveragedNormalizedAnomalies = (Temp_WeeklyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermWeeklyMean_STD
+
+####Plot Flags####
+
+#Plot yearly, monthly, or weekly averages?
+time_period = 'y' #enter y, m, or w or yearly, monthly, or weekly
+
+#Overlay line plot on top of color stripes?
+overlay = 'y' #enter y for yes, n for no
+
+####End Plot Flags####
+
+
+#selecting dataset to plot
+if(time_period) == 'y':
+    temp_data = Temp_YearlyAveragedNormalizedAnomalies
+    tick_int = 10
+elif(time_period) == 'm':
+    tick_int = 120
+    temp_data = Temp_MonthlyAveragedNormalizedAnomalies
+elif(time_period) == 'w':
+    temp_data = Temp_WeeklyAveragedNormalizedAnomalies
+    tick_int = 520
+
+#determining y bounds for plots
+temp_max = max(temp_data)
+temp_min = min(temp_data)
+max_tot = max(np.abs([temp_max,temp_min]))
+
+print('Max Value: ' , temp_max)
+print('Min Value: ' , temp_min)
+
+
+#plotting barcode graph with temp_data
+fig , ax1 = plt.subplots(figsize=(20,10))
+
+im = ax1.imshow(temp_data.reshape(1, -1), aspect = 'auto', cmap = 'seismic', 
+                vmin = -2.5, vmax = 2.5) 
+                
+                #used if there isn't a single outlier data point that ruins everything
+                #vmin = ((max_tot * -1) - (max_tot) * 0.1), 
+                #vmax = (max_tot + max_tot * 0.1))
+                
+ax1.set_yticks([])
+
+#adding line plot on top of graph
+if overlay == 'y':
+    ax2 = ax1.twinx()
+    ax2.plot(temp_data,color='yellow',linewidth = 3, marker = 'o', markersize = 10)
+    ax2.set_xticks(np.arange(0,len(temp_data),tick_int))
+    ax2.set_xticklabels(np.arange(startdates[0],startdates[-1],10))
+    ax2.set_ylim(((max_tot * -1) - (max_tot) * 0.1), (max_tot + max_tot * 0.1))
+    ax2.yaxis.set_ticks_position('left')
+elif overlay == 'n':
+    ax1.set_xticks(np.arange(0,len(temp_data),10))
+    ax1.set_xticklabels(np.arange(startdates[0],startdates[-1],10))
+
+#fig.colorbar(im)
+plt.xlim(0,len(temp_data))
+plt.show()
