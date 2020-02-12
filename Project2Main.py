@@ -98,10 +98,15 @@ Temp_WeeklyAveraged = data_adj2.groupby(['Year','Week_of_Year'], as_index=False)
 # 1971-2000 Average
 Temp_LongTermMean = data_adj2[(data_adj2['Year'] > 1970) & (data_adj2['Year'] < 2001)]['Temp_DailyAveraged'].mean()
 
-# 1901-2000 STD
-Temp_LongTermSTD = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)]['Temp_DailyAveraged'].std()
+# 1901-2000 STDs
+Temp_LongerTermYearlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year'], as_index=False)['Temp_DailyAveraged'].mean()
+Temp_LongerTermYearlyMean_STD = np.std(Temp_LongerTermYearlyMean.values[:,1])
+Temp_LongerTermMonthlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year','Month'], as_index=False)['Temp_DailyAveraged'].mean()
+Temp_LongerTermMonthlyMean_STD = np.std(Temp_LongerTermMonthlyMean.values[:,1])
+Temp_LongerTermWeeklyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year','Week_of_Year'], as_index=False)['Temp_DailyAveraged'].mean()
+Temp_LongerTermWeeklyMean_STD = np.std(Temp_LongerTermWeeklyMean.values[:,1])
 
 # Calculate Normalized Anomalies
-Temp_YearlyAveragedNormalizedAnomalies = (Temp_YearlyAveraged - Temp_LongTermMean)/Temp_LongTermSTD
-Temp_MonthlyAveragedNormalizedAnomalies = (Temp_MonthlyAveraged - Temp_LongTermMean)/Temp_LongTermSTD
-Temp_WeeklyAveragedNormalizedAnomalies = (Temp_WeeklyAveraged - Temp_LongTermMean)/Temp_LongTermSTD
+Temp_YearlyAveragedNormalizedAnomalies = (Temp_YearlyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermYearlyMean_STD
+Temp_MonthlyAveragedNormalizedAnomalies = (Temp_MonthlyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermMonthlyMean_STD
+Temp_WeeklyAveragedNormalizedAnomalies = (Temp_WeeklyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermWeeklyMean_STD
