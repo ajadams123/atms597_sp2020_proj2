@@ -11,8 +11,11 @@ import requests
 import pandas as pd
 import datetime
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
 from IPython import display # for updating the cell dynamically
 
+# Setting api request 
 def make_request(endpoint, payload=None):
     """
     Make a request to a specific endpoint on the weather API
@@ -32,14 +35,15 @@ def make_request(endpoint, payload=None):
         headers={
             'token': 'UnEKmlXMamzVGuKAlGHAyBGoqeBOPwir'
         },
-        params=payload
+        params = payload
     )
 
-startdates = np.arange(1876,2019)
+# Range of years you wish to plot
+startdates = np.arange(1876, 2019)
 
 results = []
 
-
+# Looping through the given date range, collecting a full year with each api call
 for i in range(len(startdates) + 1):
 
     display.display(f'Gathering data for {str(startdates[i])}')
@@ -49,7 +53,7 @@ for i in range(len(startdates) + 1):
         {
         'datasetid' : 'GHCND', # Global Historical Climatology Network - Daily (GHCND) dataset
         'stationid' : 'GHCND:GM000003319', # Berlin, Germany
-        'datatypeid': ('TMAX', 'TMIN'), 
+        'datatypeid': ('TMAX', 'TMIN'),
         'startdate' : datetime.date(startdates[i], 1, 1),
         'enddate' : datetime.date(startdates[i], 12, 31),
         'units' : 'metric',
@@ -60,17 +64,12 @@ for i in range(len(startdates) + 1):
         # we extend the list instead of appending to avoid getting a nested list
         results.extend(response.json()['results'])
 
-#creating Pandas dataframe from results
+# Loading results into a Pandas dataframe and checking how it looks
 df = pd.DataFrame(results)
-
-#checking to see if data looks good
 df
 
-#saving data to csv for download if you want
-df.to_csv('berlin_dailytemps_1876-2019.csv', index=False)
-
-#Moving TMAX and TMIN into separate columns
-data_adjusted = df.pivot(index='date', columns='datatype', values='value').reset_index().rename_axis(None, axis=1)
+# Moving TMAX and TMIN into separate columns
+data_adjusted = df.pivot(index = 'date', columns = 'datatype', values = 'value').reset_index().rename_axis(None, axis = 1)
 data_adj2 = data_adjusted.set_index(pd.DatetimeIndex(data_adjusted['date']))
 
 # Parse datestring into separate columns
@@ -79,6 +78,12 @@ data_adj2['Month'] = pd.to_datetime(data_adj2['date']).dt.month
 data_adj2['Week_of_Year'] = pd.to_datetime(data_adj2['date']).dt.week
 data_adj2['Day'] = pd.to_datetime(data_adj2['date']).dt.day
 data_adj2['Time'] = pd.to_datetime(data_adj2['date']).dt.time
+
+# Checking dataframe to see if fields were changed properly
+data_adj2
+
+# Saving to csv if you wish to download the data
+data_adj2.to_csv('berlin_dailytemps_1876-2019.csv')
 
 # Read in TMAX/TMIN values
 TMAX = data_adj2['TMAX']
@@ -89,81 +94,93 @@ Temp_DailyAveraged = (TMAX + TMIN)/2
 data_adj2['Temp_DailyAveraged'] = Temp_DailyAveraged
 
 # Group Daily-averaged temperatures by Year/Month, then Average
-Temp_YearlyAveraged = data_adj2.groupby(['Year'], as_index=False)['Temp_DailyAveraged'].mean()
-Temp_MonthlyAveraged = data_adj2.groupby(['Year','Month'], as_index=False)['Temp_DailyAveraged'].mean()
-Temp_WeeklyAveraged = data_adj2.groupby(['Year','Week_of_Year'], as_index=False)['Temp_DailyAveraged'].mean()
+Temp_YearlyAveraged = data_adj2.groupby(['Year'], as_index = False)['Temp_DailyAveraged'].mean()
+Temp_MonthlyAveraged = data_adj2.groupby(['Year', 'Month'], as_index = False)['Temp_DailyAveraged'].mean()
+Temp_WeeklyAveraged = data_adj2.groupby(['Year', 'Week_of_Year'], as_index = False)['Temp_DailyAveraged'].mean()
 
 # 1971-2000 Average
 Temp_LongTermMean = data_adj2[(data_adj2['Year'] > 1970) & (data_adj2['Year'] < 2001)]['Temp_DailyAveraged'].mean()
 
 # 1901-2000 STDs
-Temp_LongerTermYearlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year'], as_index=False)['Temp_DailyAveraged'].mean()
-Temp_LongerTermYearlyMean_STD = np.std(Temp_LongerTermYearlyMean.values[:,1])
-Temp_LongerTermMonthlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year','Month'], as_index=False)['Temp_DailyAveraged'].mean()
-Temp_LongerTermMonthlyMean_STD = np.std(Temp_LongerTermMonthlyMean.values[:,1])
-Temp_LongerTermWeeklyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year','Week_of_Year'], as_index=False)['Temp_DailyAveraged'].mean()
-Temp_LongerTermWeeklyMean_STD = np.std(Temp_LongerTermWeeklyMean.values[:,1])
+Temp_LongerTermYearlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year'], as_index = False)['Temp_DailyAveraged'].mean()
+Temp_LongerTermYearlyMean_STD = np.std(Temp_LongerTermYearlyMean.values[:, 1])
+Temp_LongerTermMonthlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year', 'Month'], as_index = False)['Temp_DailyAveraged'].mean()
+Temp_LongerTermMonthlyMean_STD = np.std(Temp_LongerTermMonthlyMean.values[:, 1])
+Temp_LongerTermWeeklyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year', 'Week_of_Year'], as_index = False)['Temp_DailyAveraged'].mean()
+Temp_LongerTermWeeklyMean_STD = np.std(Temp_LongerTermWeeklyMean.values[:, 1])
 
 # Calculate Normalized Anomalies
-Temp_YearlyAveragedNormalizedAnomalies = (Temp_YearlyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermYearlyMean_STD
-Temp_MonthlyAveragedNormalizedAnomalies = (Temp_MonthlyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermMonthlyMean_STD
-Temp_WeeklyAveragedNormalizedAnomalies = (Temp_WeeklyAveraged.values[:,1] - Temp_LongTermMean)/Temp_LongerTermWeeklyMean_STD
+Temp_YearlyAveragedNormalizedAnomalies = (Temp_YearlyAveraged.values[:, 1] - Temp_LongTermMean) / Temp_LongerTermYearlyMean_STD
+Temp_MonthlyAveragedNormalizedAnomalies = (Temp_MonthlyAveraged.values[:, 1] - Temp_LongTermMean) / Temp_LongerTermMonthlyMean_STD
+Temp_WeeklyAveragedNormalizedAnomalies = (Temp_WeeklyAveraged.values[:, 1] - Temp_LongTermMean) / Temp_LongerTermWeeklyMean_STD
 
 ####Plot Flags####
 
-#Plot yearly, monthly, or weekly averages?
+# Plot yearly, monthly, or weekly averages?
 time_period = 'y' #enter y, m, or w or yearly, monthly, or weekly
 
-#Overlay line plot on top of color stripes?
+# Overlay line plot on top of color stripes?
 overlay = 'y' #enter y for yes, n for no
 
 ####End Plot Flags####
 
 
-#selecting dataset to plot
+# Selecting dataset to plot
 if(time_period) == 'y':
     temp_data = Temp_YearlyAveragedNormalizedAnomalies
     tick_int = 10
+    fig_width = 20
+    fig_height = 10
 elif(time_period) == 'm':
     tick_int = 120
     temp_data = Temp_MonthlyAveragedNormalizedAnomalies
+    fig_width = 30
+    fig_height = 5
 elif(time_period) == 'w':
     temp_data = Temp_WeeklyAveragedNormalizedAnomalies
     tick_int = 520
+    fig_width = 50
+    fig_height = 3
 
-#determining y bounds for plots
+# Determining y bounds for plots
 temp_max = max(temp_data)
 temp_min = min(temp_data)
-max_tot = max(np.abs([temp_max,temp_min]))
+max_tot = max(np.abs([temp_max, temp_min]))
 
 print('Max Value: ' , temp_max)
 print('Min Value: ' , temp_min)
 
 
-#plotting barcode graph with temp_data
-fig , ax1 = plt.subplots(figsize=(20,10))
+# Plotting barcode graph with data
+
+fig , ax1 = plt.subplots(figsize=(fig_width, fig_height))
 
 im = ax1.imshow(temp_data.reshape(1, -1), aspect = 'auto', cmap = 'seismic', 
-                vmin = -2.5, vmax = 2.5) 
+                vmin = -3, vmax = 3) 
                 
-                #used if there isn't a single outlier data point that ruins everything
+                #used if there isn't a single outlier data point
                 #vmin = ((max_tot * -1) - (max_tot) * 0.1), 
                 #vmax = (max_tot + max_tot * 0.1))
-                
-ax1.set_yticks([])
 
-#adding line plot on top of graph
+ax1.set_yticks([])
+ax1.set_xlabel('Year', fontsize = 14)
+
+# Adding line plot on top of graph
 if overlay == 'y':
     ax2 = ax1.twinx()
-    ax2.plot(temp_data,color='yellow',linewidth = 3, marker = 'o', markersize = 10)
-    ax2.set_xticks(np.arange(0,len(temp_data),tick_int))
-    ax2.set_xticklabels(np.arange(startdates[0],startdates[-1],10))
-    ax2.set_ylim(((max_tot * -1) - (max_tot) * 0.1), (max_tot + max_tot * 0.1))
+    ax2.plot(temp_data, color = 'yellow', linewidth = 3, marker = 'o', markersize = 10)
+    ax2.set_xticks(np.arange(0, len(temp_data), tick_int))
+    ax2.set_xticklabels(np.arange(startdates[0], startdates[-1], 10) , fontsize = 12)
+    ax2.set_ylim(((max_tot * -1) - (max_tot * 0.1)), (max_tot + max_tot * 0.1))
     ax2.yaxis.set_ticks_position('left')
+    ax2.set_ylabel('Temperature Anomaly (C)', fontsize = 14)
+    ax2.yaxis.set_label_position('left')
 elif overlay == 'n':
-    ax1.set_xticks(np.arange(0,len(temp_data),10))
-    ax1.set_xticklabels(np.arange(startdates[0],startdates[-1],10))
+    ax1.set_xticks(np.arange(0, len(temp_data), 10))
+    ax1.set_xticklabels(np.arange(startdates[0], startdates[-1], 10))
 
-#fig.colorbar(im)
+
+fig.colorbar(im).set_label('Temperature Anomaly (C)', fontsize = 14)
 plt.xlim(0,len(temp_data))
+plt.title("Berlin, Germany Normalized Temperature Anomalies 1876-2019", fontsize = 16)
 plt.show()
