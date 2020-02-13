@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 from IPython import display # for updating the cell dynamically
 
-# Setting api request 
+## Setting API request 
 def make_request(endpoint, payload=None):
     """
     Make a request to a specific endpoint on the weather API
@@ -38,12 +38,12 @@ def make_request(endpoint, payload=None):
         params = payload
     )
 
-# Range of years you wish to plot
-startdates = np.arange(1876, 2019)
+## Range of years you wish to plot
+startdates = np.arange(1876, 2019) # year range for Berlin, Germany dataset
 
 results = []
 
-# Looping through the given date range, collecting a full year with each api call
+## Looping through the given date range, collecting a full year with each API call
 for i in range(len(startdates) + 1):
 
     display.display(f'Gathering data for {str(startdates[i])}')
@@ -61,47 +61,47 @@ for i in range(len(startdates) + 1):
         }
     )
     if response.ok:
-        # we extend the list instead of appending to avoid getting a nested list
+        # list extended instead of appended to avoid getting a nested list
         results.extend(response.json()['results'])
 
-# Loading results into a Pandas dataframe and checking how it looks
+## Loading results into a Pandas dataframe and checking how it looks
 df = pd.DataFrame(results)
 df
 
-# Moving TMAX and TMIN into separate columns
+## Moving TMAX and TMIN into separate columns
 data_adjusted = df.pivot(index = 'date', columns = 'datatype', values = 'value').reset_index().rename_axis(None, axis = 1)
 data_adj2 = data_adjusted.set_index(pd.DatetimeIndex(data_adjusted['date']))
 
-# Parse datestring into separate columns
+## Parsing datestring into separate columns
 data_adj2['Year'] = pd.to_datetime(data_adj2['date']).dt.year
 data_adj2['Month'] = pd.to_datetime(data_adj2['date']).dt.month
 data_adj2['Week_of_Year'] = pd.to_datetime(data_adj2['date']).dt.week
 data_adj2['Day'] = pd.to_datetime(data_adj2['date']).dt.day
 data_adj2['Time'] = pd.to_datetime(data_adj2['date']).dt.time
 
-# Checking dataframe to see if fields were changed properly
+## Checking dataframe to see if fields were changed properly
 data_adj2
 
-# Saving to csv if you wish to download the data
+## Saving to csv if you wish to download the data
 data_adj2.to_csv('berlin_dailytemps_1876-2019.csv')
 
-# Read in TMAX/TMIN values
+## Reading in TMAX & TMIN values
 TMAX = data_adj2['TMAX']
 TMIN = data_adj2['TMIN']
 
-# Calculate daily-averaged temperatures
+## Calculate daily-averaged temperatures
 Temp_DailyAveraged = (TMAX + TMIN)/2
 data_adj2['Temp_DailyAveraged'] = Temp_DailyAveraged
 
-# Group Daily-averaged temperatures by Year/Month, then Average
+## Group Daily-averaged temperatures by Year or Month or Week, then average
 Temp_YearlyAveraged = data_adj2.groupby(['Year'], as_index = False)['Temp_DailyAveraged'].mean()
 Temp_MonthlyAveraged = data_adj2.groupby(['Year', 'Month'], as_index = False)['Temp_DailyAveraged'].mean()
 Temp_WeeklyAveraged = data_adj2.groupby(['Year', 'Week_of_Year'], as_index = False)['Temp_DailyAveraged'].mean()
 
-# 1971-2000 Average
+## 1971-2000 Average using daily-averaged temperatures
 Temp_LongTermMean = data_adj2[(data_adj2['Year'] > 1970) & (data_adj2['Year'] < 2001)]['Temp_DailyAveraged'].mean()
 
-# 1901-2000 STDs
+## 1901-2000 Standard Deviations for Yearly-, Monthly-, or Weekly-averaged temperatures
 Temp_LongerTermYearlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year'], as_index = False)['Temp_DailyAveraged'].mean()
 Temp_LongerTermYearlyMean_STD = np.std(Temp_LongerTermYearlyMean.values[:, 1])
 Temp_LongerTermMonthlyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year', 'Month'], as_index = False)['Temp_DailyAveraged'].mean()
@@ -109,23 +109,24 @@ Temp_LongerTermMonthlyMean_STD = np.std(Temp_LongerTermMonthlyMean.values[:, 1])
 Temp_LongerTermWeeklyMean = data_adj2[(data_adj2['Year'] > 1900) & (data_adj2['Year'] < 2001)].groupby(['Year', 'Week_of_Year'], as_index = False)['Temp_DailyAveraged'].mean()
 Temp_LongerTermWeeklyMean_STD = np.std(Temp_LongerTermWeeklyMean.values[:, 1])
 
-# Calculate Normalized Anomalies
+## Calculate Normalized Anomalies using respective 1901-2000 standard deviation
 Temp_YearlyAveragedNormalizedAnomalies = (Temp_YearlyAveraged.values[:, 1] - Temp_LongTermMean) / Temp_LongerTermYearlyMean_STD
 Temp_MonthlyAveragedNormalizedAnomalies = (Temp_MonthlyAveraged.values[:, 1] - Temp_LongTermMean) / Temp_LongerTermMonthlyMean_STD
 Temp_WeeklyAveragedNormalizedAnomalies = (Temp_WeeklyAveraged.values[:, 1] - Temp_LongTermMean) / Temp_LongerTermWeeklyMean_STD
 
+###############################################################################################################################
 ####Plot Flags####
 
-# Plot yearly, monthly, or weekly averages?
-time_period = 'y' #enter y, m, or w or yearly, monthly, or weekly
+## Plot yearly, monthly, or weekly averages?
+time_period = 'y' #enter y, m, or w for yearly, monthly, or weekly
 
-# Overlay line plot on top of color stripes?
+## Overlay line plot on top of color stripes?
 overlay = 'y' #enter y for yes, n for no
 
 ####End Plot Flags####
 
 
-# Selecting dataset to plot
+## Selecting dataset to plot
 if(time_period) == 'y':
     temp_data = Temp_YearlyAveragedNormalizedAnomalies
     tick_int = 10
@@ -142,7 +143,7 @@ elif(time_period) == 'w':
     fig_width = 50
     fig_height = 3
 
-# Determining y bounds for plots
+## Determining y bounds for plotting
 temp_max = max(temp_data)
 temp_min = min(temp_data)
 max_tot = max(np.abs([temp_max, temp_min]))
@@ -151,8 +152,7 @@ print('Max Value: ' , temp_max)
 print('Min Value: ' , temp_min)
 
 
-# Plotting barcode graph with data
-
+## Plotting barcode graph with data
 fig , ax1 = plt.subplots(figsize=(fig_width, fig_height))
 
 im = ax1.imshow(temp_data.reshape(1, -1), aspect = 'auto', cmap = 'seismic', 
@@ -165,7 +165,7 @@ im = ax1.imshow(temp_data.reshape(1, -1), aspect = 'auto', cmap = 'seismic',
 ax1.set_yticks([])
 ax1.set_xlabel('Year', fontsize = 14)
 
-# Adding line plot on top of graph
+## Adding line plot on top of graph
 if overlay == 'y':
     ax2 = ax1.twinx()
     ax2.plot(temp_data, color = 'yellow', linewidth = 3, marker = 'o', markersize = 10)
